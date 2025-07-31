@@ -223,6 +223,163 @@ func TestModelConfigHandler(t *testing.T) {
 			assert.Equal(t, v1alpha1.AzureOpenAI, config.Data.Spec.Provider)
 		})
 
+		t.Run("Success_Gemini", func(t *testing.T) {
+			handler, _, responseRecorder := setupHandler()
+
+			reqBody := api.CreateModelConfigRequest{
+				Ref:      "default/test-gemini",
+				Provider: api.Provider{Type: "Gemini"},
+				Model:    "gemini-1.5-pro",
+				APIKey:   "test-api-key",
+				GeminiParams: &v1alpha1.GeminiConfig{
+					BaseURL:          "https://generativelanguage.googleapis.com",
+					Temperature:      "0.7",
+					MaxOutputTokens:  intPtr(1024),
+					TopP:             "0.9",
+					TopK:             intPtr(40),
+					CandidateCount:   intPtr(1),
+					StopSequences:    []string{"STOP"},
+					ResponseMimeType: "application/json",
+					SafetySettings: map[string]string{
+						"HARM_CATEGORY_HARASSMENT": "BLOCK_MEDIUM_AND_ABOVE",
+					},
+				},
+			}
+
+			jsonBody, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest("POST", "/api/modelconfigs/", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.HandleCreateModelConfig(responseRecorder, req)
+
+			assert.Equal(t, http.StatusCreated, responseRecorder.Code, responseRecorder.Body.String())
+
+			var config api.StandardResponse[v1alpha1.ModelConfig]
+			err := json.Unmarshal(responseRecorder.Body.Bytes(), &config)
+			require.NoError(t, err)
+			assert.Equal(t, v1alpha1.Gemini, config.Data.Spec.Provider)
+			assert.Equal(t, "gemini-1.5-pro", config.Data.Spec.Model)
+			assert.NotNil(t, config.Data.Spec.Gemini)
+			assert.Equal(t, "https://generativelanguage.googleapis.com", config.Data.Spec.Gemini.BaseURL)
+			assert.Equal(t, "0.7", config.Data.Spec.Gemini.Temperature)
+		})
+
+		t.Run("Success_Gemini_MinimalConfig", func(t *testing.T) {
+			handler, _, responseRecorder := setupHandler()
+
+			reqBody := api.CreateModelConfigRequest{
+				Ref:      "default/test-gemini-minimal",
+				Provider: api.Provider{Type: "Gemini"},
+				Model:    "gemini-1.5-flash",
+				APIKey:   "test-api-key",
+				// No GeminiParams - should use defaults
+			}
+
+			jsonBody, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest("POST", "/api/modelconfigs/", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.HandleCreateModelConfig(responseRecorder, req)
+
+			assert.Equal(t, http.StatusCreated, responseRecorder.Code, responseRecorder.Body.String())
+
+			var config api.StandardResponse[v1alpha1.ModelConfig]
+			err := json.Unmarshal(responseRecorder.Body.Bytes(), &config)
+			require.NoError(t, err)
+			assert.Equal(t, v1alpha1.Gemini, config.Data.Spec.Provider)
+			assert.Equal(t, "gemini-1.5-flash", config.Data.Spec.Model)
+			// Gemini config should be nil when not provided
+			assert.Nil(t, config.Data.Spec.Gemini)
+		})
+
+		t.Run("Success_Gemini_FullConfig", func(t *testing.T) {
+			handler, _, responseRecorder := setupHandler()
+
+			reqBody := api.CreateModelConfigRequest{
+				Ref:      "default/test-gemini-full",
+				Provider: api.Provider{Type: "Gemini"},
+				Model:    "gemini-1.5-pro",
+				APIKey:   "test-api-key",
+				GeminiParams: &v1alpha1.GeminiConfig{
+					BaseURL:          "https://custom-gemini-endpoint.com",
+					Temperature:      "0.8",
+					MaxOutputTokens:  intPtr(2048),
+					TopP:             "0.95",
+					TopK:             intPtr(50),
+					CandidateCount:   intPtr(2),
+					StopSequences:    []string{"STOP", "END", "FINISH"},
+					ResponseMimeType: "text/plain",
+					SafetySettings: map[string]string{
+						"HARM_CATEGORY_HARASSMENT":        "BLOCK_MEDIUM_AND_ABOVE",
+						"HARM_CATEGORY_HATE_SPEECH":       "BLOCK_ONLY_HIGH",
+						"HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_LOW_AND_ABOVE",
+						"HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+					},
+				},
+			}
+
+			jsonBody, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest("POST", "/api/modelconfigs/", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.HandleCreateModelConfig(responseRecorder, req)
+
+			assert.Equal(t, http.StatusCreated, responseRecorder.Code, responseRecorder.Body.String())
+
+			var config api.StandardResponse[v1alpha1.ModelConfig]
+			err := json.Unmarshal(responseRecorder.Body.Bytes(), &config)
+			require.NoError(t, err)
+
+			// Verify provider and model
+			assert.Equal(t, v1alpha1.Gemini, config.Data.Spec.Provider)
+			assert.Equal(t, "gemini-1.5-pro", config.Data.Spec.Model)
+
+			// Verify Gemini config
+			geminiConfig := config.Data.Spec.Gemini
+			require.NotNil(t, geminiConfig)
+			assert.Equal(t, "https://custom-gemini-endpoint.com", geminiConfig.BaseURL)
+			assert.Equal(t, "0.8", geminiConfig.Temperature)
+			assert.Equal(t, 2048, *geminiConfig.MaxOutputTokens)
+			assert.Equal(t, "0.95", geminiConfig.TopP)
+			assert.Equal(t, 50, *geminiConfig.TopK)
+			assert.Equal(t, 2, *geminiConfig.CandidateCount)
+			assert.Len(t, geminiConfig.StopSequences, 3)
+			assert.Equal(t, "text/plain", geminiConfig.ResponseMimeType)
+			assert.Len(t, geminiConfig.SafetySettings, 4)
+		})
+
+		t.Run("Success_Gemini_VisionModel", func(t *testing.T) {
+			handler, _, responseRecorder := setupHandler()
+
+			reqBody := api.CreateModelConfigRequest{
+				Ref:      "default/test-gemini-vision",
+				Provider: api.Provider{Type: "Gemini"},
+				Model:    "gemini-pro-vision",
+				APIKey:   "test-api-key",
+				GeminiParams: &v1alpha1.GeminiConfig{
+					Temperature:     "0.5",
+					MaxOutputTokens: intPtr(1024),
+					SafetySettings: map[string]string{
+						"HARM_CATEGORY_HARASSMENT": "BLOCK_MEDIUM_AND_ABOVE",
+					},
+				},
+			}
+
+			jsonBody, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest("POST", "/api/modelconfigs/", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			handler.HandleCreateModelConfig(responseRecorder, req)
+
+			assert.Equal(t, http.StatusCreated, responseRecorder.Code, responseRecorder.Body.String())
+
+			var config api.StandardResponse[v1alpha1.ModelConfig]
+			err := json.Unmarshal(responseRecorder.Body.Bytes(), &config)
+			require.NoError(t, err)
+			assert.Equal(t, v1alpha1.Gemini, config.Data.Spec.Provider)
+			assert.Equal(t, "gemini-pro-vision", config.Data.Spec.Model)
+		})
+
 		t.Run("InvalidJSON", func(t *testing.T) {
 			handler, _, responseRecorder := setupHandler()
 
@@ -452,6 +609,71 @@ func TestModelConfigHandler(t *testing.T) {
 			assert.Contains(t, updatedConfig.Data.ModelParams, "temperature")
 		})
 
+		t.Run("Success_UpdateGemini", func(t *testing.T) {
+			handler, kubeClient, responseRecorder := setupHandler()
+
+			// Create existing Gemini model config
+			config := &v1alpha1.ModelConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gemini-config",
+					Namespace: "default",
+				},
+				Spec: v1alpha1.ModelConfigSpec{
+					Model:    "gemini-1.5-flash",
+					Provider: v1alpha1.Gemini,
+					Gemini: &v1alpha1.GeminiConfig{
+						Temperature:     "0.5",
+						MaxOutputTokens: intPtr(1024),
+					},
+				},
+			}
+
+			err := kubeClient.Create(context.Background(), config)
+			require.NoError(t, err)
+
+			apiKey := "new-gemini-api-key"
+			reqBody := api.UpdateModelConfigRequest{
+				Provider: api.Provider{Type: "Gemini"},
+				Model:    "gemini-1.5-pro",
+				APIKey:   &apiKey,
+				GeminiParams: &v1alpha1.GeminiConfig{
+					BaseURL:          "https://generativelanguage.googleapis.com",
+					Temperature:      "0.8",
+					MaxOutputTokens:  intPtr(2048),
+					TopP:             "0.9",
+					TopK:             intPtr(40),
+					CandidateCount:   intPtr(1),
+					StopSequences:    []string{"STOP", "END"},
+					ResponseMimeType: "application/json",
+					SafetySettings: map[string]string{
+						"HARM_CATEGORY_HARASSMENT":  "BLOCK_MEDIUM_AND_ABOVE",
+						"HARM_CATEGORY_HATE_SPEECH": "BLOCK_ONLY_HIGH",
+					},
+				},
+			}
+
+			jsonBody, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest("PUT", "/api/modelconfigs/default/test-gemini-config", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			router := mux.NewRouter()
+			router.HandleFunc("/api/modelconfigs/{namespace}/{name}", func(w http.ResponseWriter, r *http.Request) {
+				handler.HandleUpdateModelConfig(responseRecorder, r)
+			}).Methods("PUT")
+
+			router.ServeHTTP(responseRecorder, req)
+
+			assert.Equal(t, http.StatusOK, responseRecorder.Code, responseRecorder.Body.String())
+
+			var updatedConfig api.StandardResponse[api.ModelConfigResponse]
+			err = json.Unmarshal(responseRecorder.Body.Bytes(), &updatedConfig)
+			require.NoError(t, err)
+			assert.Equal(t, "gemini-1.5-pro", updatedConfig.Data.Model)
+			assert.Equal(t, "Gemini", updatedConfig.Data.ProviderName)
+			assert.Contains(t, updatedConfig.Data.ModelParams, "temperature")
+			assert.Contains(t, updatedConfig.Data.ModelParams, "maxOutputTokens")
+		})
+
 		t.Run("InvalidJSON", func(t *testing.T) {
 			handler, _, responseRecorder := setupHandler()
 
@@ -543,4 +765,9 @@ func TestModelConfigHandler(t *testing.T) {
 			assert.NotNil(t, responseRecorder.errorReceived)
 		})
 	})
+}
+
+// Helper function for tests
+func intPtr(i int) *int {
+	return &i
 }

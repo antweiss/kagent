@@ -53,6 +53,9 @@ func (h *ModelConfigHandler) HandleListModelConfigs(w ErrorResponseWriter, r *ht
 		if config.Spec.Ollama != nil {
 			FlattenStructToMap(config.Spec.Ollama, modelParams)
 		}
+		if config.Spec.Gemini != nil {
+			FlattenStructToMap(config.Spec.Gemini, modelParams)
+		}
 
 		responseItem := api.ModelConfigResponse{
 			Ref:             common.GetObjectRef(&config),
@@ -127,6 +130,9 @@ func (h *ModelConfigHandler) HandleGetModelConfig(w ErrorResponseWriter, r *http
 	}
 	if modelConfig.Spec.Ollama != nil {
 		FlattenStructToMap(modelConfig.Spec.Ollama, modelParams)
+	}
+	if modelConfig.Spec.Gemini != nil {
+		FlattenStructToMap(modelConfig.Spec.Gemini, modelParams)
 	}
 
 	responseItem := api.ModelConfigResponse{
@@ -273,6 +279,13 @@ func (h *ModelConfigHandler) HandleCreateModelConfig(w ErrorResponseWriter, r *h
 		} else {
 			log.V(1).Info("No Ollama params provided in create.")
 		}
+	case v1alpha1.Gemini:
+		if req.GeminiParams != nil {
+			modelConfig.Spec.Gemini = req.GeminiParams
+			log.V(1).Info("Assigned Gemini params to spec")
+		} else {
+			log.V(1).Info("No Gemini params provided in create.")
+		}
 	default:
 		providerConfigErr = fmt.Errorf("unsupported provider type: %s", req.Provider.Type)
 	}
@@ -385,6 +398,7 @@ func (h *ModelConfigHandler) HandleUpdateModelConfig(w ErrorResponseWriter, r *h
 		Anthropic:       nil,
 		AzureOpenAI:     nil,
 		Ollama:          nil,
+		Gemini:          nil,
 	}
 
 	// --- Update Secret if API Key is provided (and not Ollama) ---
@@ -443,6 +457,13 @@ func (h *ModelConfigHandler) HandleUpdateModelConfig(w ErrorResponseWriter, r *h
 		} else {
 			log.V(1).Info("No Ollama params provided in update.")
 		}
+	case v1alpha1.Gemini:
+		if req.GeminiParams != nil {
+			modelConfig.Spec.Gemini = req.GeminiParams
+			log.V(1).Info("Assigned updated Gemini params to spec")
+		} else {
+			log.V(1).Info("No Gemini params provided in update.")
+		}
 	default:
 		providerConfigErr = fmt.Errorf("unsupported provider type specified: %s", req.Provider.Type)
 	}
@@ -468,6 +489,8 @@ func (h *ModelConfigHandler) HandleUpdateModelConfig(w ErrorResponseWriter, r *h
 		FlattenStructToMap(modelConfig.Spec.AzureOpenAI, updatedParams)
 	} else if modelConfig.Spec.Ollama != nil {
 		FlattenStructToMap(modelConfig.Spec.Ollama, updatedParams)
+	} else if modelConfig.Spec.Gemini != nil {
+		FlattenStructToMap(modelConfig.Spec.Gemini, updatedParams)
 	}
 
 	responseItem := api.ModelConfigResponse{

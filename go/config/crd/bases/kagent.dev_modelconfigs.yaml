@@ -67,7 +67,7 @@ spec:
                     type: string
                 type: object
               anthropicVertexAI:
-                description: Anthropic-specific configuration
+                description: Anthropic Vertex AI-specific configuration
                 properties:
                   location:
                     description: The project location
@@ -137,8 +137,43 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              gemini:
+                description: Gemini AI-specific configuration
+                properties:
+                  baseUrl:
+                    description: Base URL for the Gemini API (defaults to https://generativelanguage.googleapis.com)
+                    type: string
+                  candidateCount:
+                    description: Number of candidate responses to generate
+                    type: integer
+                  maxOutputTokens:
+                    description: Maximum tokens to generate
+                    type: integer
+                  responseMimeType:
+                    description: Response MIME type for structured output
+                    type: string
+                  safetySettings:
+                    additionalProperties:
+                      type: string
+                    description: Safety settings for content filtering
+                    type: object
+                  stopSequences:
+                    description: Stop sequences
+                    items:
+                      type: string
+                    type: array
+                  temperature:
+                    description: Temperature for sampling (0.0 to 2.0)
+                    type: string
+                  topK:
+                    description: Top-k sampling parameter
+                    type: integer
+                  topP:
+                    description: Top-p sampling parameter (0.0 to 1.0)
+                    type: string
+                type: object
               geminiVertexAI:
-                description: Gemini-specific configuration
+                description: Gemini Vertex AI-specific configuration
                 properties:
                   candidateCount:
                     description: Candidate count
@@ -248,6 +283,7 @@ spec:
                 - OpenAI
                 - AzureOpenAI
                 - Ollama
+                - Gemini
                 - GeminiVertexAI
                 - AnthropicVertexAI
                 type: string
@@ -264,6 +300,8 @@ spec:
               rule: '!(has(self.azureOpenAI) && self.provider != ''AzureOpenAI'')'
             - message: provider.ollama must be nil if the provider is not Ollama
               rule: '!(has(self.ollama) && self.provider != ''Ollama'')'
+            - message: provider.gemini must be nil if the provider is not Gemini
+              rule: '!(has(self.gemini) && self.provider != ''Gemini'')'
             - message: provider.geminiVertexAI must be nil if the provider is not
                 GeminiVertexAI
               rule: '!(has(self.geminiVertexAI) && self.provider != ''GeminiVertexAI'')'

@@ -25,7 +25,7 @@ const (
 )
 
 // ModelProvider represents the model provider type
-// +kubebuilder:validation:Enum=Anthropic;OpenAI;AzureOpenAI;Ollama;GeminiVertexAI;AnthropicVertexAI
+// +kubebuilder:validation:Enum=Anthropic;OpenAI;AzureOpenAI;Ollama;Gemini;GeminiVertexAI;AnthropicVertexAI
 type ModelProvider string
 
 const (
@@ -33,6 +33,7 @@ const (
 	AzureOpenAI       ModelProvider = "AzureOpenAI"
 	OpenAI            ModelProvider = "OpenAI"
 	Ollama            ModelProvider = "Ollama"
+	Gemini            ModelProvider = "Gemini"
 	GeminiVertexAI    ModelProvider = "GeminiVertexAI"
 	AnthropicVertexAI ModelProvider = "AnthropicVertexAI"
 )
@@ -199,12 +200,52 @@ type OllamaConfig struct {
 	Options map[string]string `json:"options,omitempty"`
 }
 
+// GeminiConfig contains Gemini AI-specific configuration options
+type GeminiConfig struct {
+	// Base URL for the Gemini API (defaults to https://generativelanguage.googleapis.com)
+	// +optional
+	BaseURL string `json:"baseUrl,omitempty"`
+
+	// Temperature for sampling (0.0 to 2.0)
+	// +optional
+	Temperature string `json:"temperature,omitempty"`
+
+	// Maximum tokens to generate
+	// +optional
+	MaxOutputTokens *int `json:"maxOutputTokens,omitempty"`
+
+	// Top-p sampling parameter (0.0 to 1.0)
+	// +optional
+	TopP string `json:"topP,omitempty"`
+
+	// Top-k sampling parameter
+	// +optional
+	TopK *int `json:"topK,omitempty"`
+
+	// Number of candidate responses to generate
+	// +optional
+	CandidateCount *int `json:"candidateCount,omitempty"`
+
+	// Stop sequences
+	// +optional
+	StopSequences []string `json:"stopSequences,omitempty"`
+
+	// Response MIME type for structured output
+	// +optional
+	ResponseMimeType string `json:"responseMimeType,omitempty"`
+
+	// Safety settings for content filtering
+	// +optional
+	SafetySettings map[string]string `json:"safetySettings,omitempty"`
+}
+
 // ModelConfigSpec defines the desired state of ModelConfig.
 //
 // +kubebuilder:validation:XValidation:message="provider.openAI must be nil if the provider is not OpenAI",rule="!(has(self.openAI) && self.provider != 'OpenAI')"
 // +kubebuilder:validation:XValidation:message="provider.anthropic must be nil if the provider is not Anthropic",rule="!(has(self.anthropic) && self.provider != 'Anthropic')"
 // +kubebuilder:validation:XValidation:message="provider.azureOpenAI must be nil if the provider is not AzureOpenAI",rule="!(has(self.azureOpenAI) && self.provider != 'AzureOpenAI')"
 // +kubebuilder:validation:XValidation:message="provider.ollama must be nil if the provider is not Ollama",rule="!(has(self.ollama) && self.provider != 'Ollama')"
+// +kubebuilder:validation:XValidation:message="provider.gemini must be nil if the provider is not Gemini",rule="!(has(self.gemini) && self.provider != 'Gemini')"
 // +kubebuilder:validation:XValidation:message="provider.geminiVertexAI must be nil if the provider is not GeminiVertexAI",rule="!(has(self.geminiVertexAI) && self.provider != 'GeminiVertexAI')"
 // +kubebuilder:validation:XValidation:message="provider.anthropicVertexAI must be nil if the provider is not AnthropicVertexAI",rule="!(has(self.anthropicVertexAI) && self.provider != 'AnthropicVertexAI')"
 
@@ -248,11 +289,15 @@ type ModelConfigSpec struct {
 	// +optional
 	Ollama *OllamaConfig `json:"ollama,omitempty"`
 
-	// Gemini-specific configuration
+	// Gemini AI-specific configuration
+	// +optional
+	Gemini *GeminiConfig `json:"gemini,omitempty"`
+
+	// Gemini Vertex AI-specific configuration
 	// +optional
 	GeminiVertexAI *GeminiVertexAIConfig `json:"geminiVertexAI,omitempty"`
 
-	// Anthropic-specific configuration
+	// Anthropic Vertex AI-specific configuration
 	// +optional
 	AnthropicVertexAI *AnthropicVertexAIConfig `json:"anthropicVertexAI,omitempty"`
 }

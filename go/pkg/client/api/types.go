@@ -61,6 +61,7 @@ type CreateModelConfigRequest struct {
 	AnthropicParams *v1alpha1.AnthropicConfig   `json:"anthropic,omitempty"`
 	AzureParams     *v1alpha1.AzureOpenAIConfig `json:"azureOpenAI,omitempty"`
 	OllamaParams    *v1alpha1.OllamaConfig      `json:"ollama,omitempty"`
+	GeminiParams    *v1alpha1.GeminiConfig      `json:"gemini,omitempty"`
 }
 
 // UpdateModelConfigRequest represents a request to update a model configuration
@@ -72,6 +73,7 @@ type UpdateModelConfigRequest struct {
 	AnthropicParams *v1alpha1.AnthropicConfig   `json:"anthropic,omitempty"`
 	AzureParams     *v1alpha1.AzureOpenAIConfig `json:"azureOpenAI,omitempty"`
 	OllamaParams    *v1alpha1.OllamaConfig      `json:"ollama,omitempty"`
+	GeminiParams    *v1alpha1.GeminiConfig      `json:"gemini,omitempty"`
 }
 
 // Agent types
