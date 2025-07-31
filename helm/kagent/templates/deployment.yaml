@@ -159,12 +159,24 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+            {{- $defaultProvider := .Values.providers.default | default "openAI" }}
+            {{- $defaultModel := index .Values.providers $defaultProvider }}
+            {{- if and $defaultModel.apiKeySecretRef $defaultModel.apiKeySecretKey }}
+            - name: {{ $defaultModel.apiKeySecretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $defaultModel.apiKeySecretRef }}
+                  key: {{ $defaultModel.apiKeySecretKey }}
+                  optional: true # if the secret is not found, the tool will not be available
+            {{- end }}
+            {{- if ne $defaultProvider "openAI" }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "kagent.fullname" . }}-openai
                   key: OPENAI_API_KEY
                   optional: true # if the secret is not found, the tool will not be available
+            {{- end }}
             - name: OTEL_TRACING_ENABLED
               value: {{ .Values.otel.tracing.enabled | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -206,12 +218,25 @@ spec:
               value: "http"
             - name: STRICT_MODE
               value: "false"
-            {{- if and .Values.mcp.doc2vec.enabled (eq .Values.providers.default "openAI") }}
+            {{- if .Values.mcp.doc2vec.enabled }}
+            {{- $defaultProvider := .Values.providers.default | default "openAI" }}
+            {{- $defaultModel := index .Values.providers $defaultProvider }}
+            {{- if and $defaultModel.apiKeySecretRef $defaultModel.apiKeySecretKey }}
+            - name: {{ $defaultModel.apiKeySecretKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $defaultModel.apiKeySecretRef }}
+                  key: {{ $defaultModel.apiKeySecretKey }}
+                  optional: true
+            {{- end }}
+            {{- if ne $defaultProvider "openAI" }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "kagent.fullname" . }}-openai
                   key: OPENAI_API_KEY
+                  optional: true
+            {{- end }}
             {{- end }}
             - name: OTEL_TRACING_ENABLED
               value: {{ .Values.otel.tracing.enabled | quote }}

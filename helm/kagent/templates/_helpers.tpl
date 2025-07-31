@@ -73,3 +73,27 @@ Removes duplicates
 {{- $nsSet := dict }}
 {{- .Values.controller.watchNamespaces | default list | uniq | join "," }}
 {{- end -}}
+
+{{/*
+Get the default provider configuration
+*/}}
+{{- define "kagent.defaultProvider" -}}
+{{- $defaultProviderName := .Values.providers.default | default "openAI" }}
+{{- index .Values.providers $defaultProviderName }}
+{{- end -}}
+
+{{/*
+Check if the provider supports API key authentication
+*/}}
+{{- define "kagent.providerHasApiKey" -}}
+{{- $provider := include "kagent.defaultProvider" . | fromYaml }}
+{{- and $provider.apiKeySecretRef $provider.apiKeySecretKey }}
+{{- end -}}
+
+{{/*
+Get the API key environment variable name for the current provider
+*/}}
+{{- define "kagent.providerApiKeyEnvName" -}}
+{{- $provider := include "kagent.defaultProvider" . | fromYaml }}
+{{- $provider.apiKeySecretKey | default (printf "%s_API_KEY" $provider.provider | upper) }}
+{{- end -}}

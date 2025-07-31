@@ -113,4 +113,72 @@ tests:
     asserts:
       - equal:
           path: metadata.namespace
-          value: custom-namespace 
+          value: custom-namespace
+
+  - it: should use gemini when set as default provider
+    set:
+      providers:
+        default: gemini
+    asserts:
+      - equal:
+          path: spec.provider
+          value: "Gemini"
+      - equal:
+          path: spec.model
+          value: "gemini-1.5-pro"
+      - equal:
+          path: spec.apiKeySecretRef
+          value: kagent-gemini
+      - equal:
+          path: spec.apiKeySecretKey
+          value: GEMINI_API_KEY
+
+  - it: should configure gemini provider with config
+    set:
+      providers:
+        default: gemini
+    asserts:
+      - equal:
+          path: spec.provider
+          value: "Gemini"
+      - equal:
+          path: spec.model
+          value: "gemini-1.5-pro"
+      - equal:
+          path: spec.gemini.baseUrl
+          value: "https://generativelanguage.googleapis.com"
+      - equal:
+          path: spec.gemini.temperature
+          value: "0.7"
+      - equal:
+          path: spec.gemini.maxOutputTokens
+          value: 8192
+      - equal:
+          path: spec.gemini.topP
+          value: "0.9"
+      - equal:
+          path: spec.gemini.topK
+          value: 40
+      - equal:
+          path: spec.gemini.candidateCount
+          value: 1
+      - equal:
+          path: spec.gemini.responseMimeType
+          value: "application/json"
+      - equal:
+          path: spec.gemini.safetySettings.HARM_CATEGORY_HARASSMENT
+          value: "BLOCK_MEDIUM_AND_ABOVE"
+      - equal:
+          path: spec.gemini.safetySettings.HARM_CATEGORY_HATE_SPEECH
+          value: "BLOCK_MEDIUM_AND_ABOVE"
+
+  - it: should use custom gemini model when configured
+    set:
+      providers:
+        default: gemini
+        gemini:
+          model: "gemini-1.5-flash"
+    asserts:
+      - equal:
+          path: spec.model
+          value: "gemini-1.5-flash" 

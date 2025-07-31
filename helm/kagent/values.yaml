@@ -35,6 +35,23 @@ providers:
       azureAdToken: ""
       azureDeployment: ""
       azureEndpoint: ""
+  gemini:
+    provider: Gemini
+    model: "gemini-1.5-pro"
+    apiKeySecretRef: kagent-gemini
+    apiKeySecretKey: GEMINI_API_KEY
+    apiKey: ""
+    config:
+      baseUrl: "https://generativelanguage.googleapis.com"
+      temperature: "0.7"
+      maxOutputTokens: 8192
+      topP: "0.9"
+      topK: 40
+      candidateCount: 1
+      responseMimeType: "application/json"
+      safetySettings:
+        HARM_CATEGORY_HARASSMENT: "BLOCK_MEDIUM_AND_ABOVE"
+        HARM_CATEGORY_HATE_SPEECH: "BLOCK_MEDIUM_AND_ABOVE"
 
 database:
   type: sqlite
