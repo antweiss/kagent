@@ -32,6 +32,10 @@ class ValidationService:
                 provider = "autogen_ext.models.openai.AzureOpenAIChatCompletionClient"
             elif provider in ["openai_chat_completion_client", "OpenAIChatCompletionClient"]:
                 provider = "autogen_ext.models.openai.OpenAIChatCompletionClient"
+            elif provider in ["gemini_chat_completion_client", "GeminiChatCompletionClient"]:
+                provider = "kagent.models.gemini.GeminiChatCompletionClient"
+            elif provider in ["gemini_vertexai_chat_completion_client", "GeminiVertexAIChatCompletionClient"]:
+                provider = "kagent.models.vertexai.GeminiVertexAIChatCompletionClient"
 
             module_path, class_name = provider.rsplit(".", maxsplit=1)
             module = importlib.import_module(module_path)
@@ -66,6 +70,109 @@ class ValidationService:
                 error="Component type is missing",
                 suggestion="Add a component_type field to the component configuration",
             )
+
+    @staticmethod
+    def validate_gemini_config(component: ComponentModel) -> List[ValidationError]:
+        """Validate Gemini-specific configuration parameters"""
+        errors = []
+        
+        if component.provider not in ["kagent.models.gemini.GeminiChatCompletionClient", 
+                                     "gemini_chat_completion_client", "GeminiChatCompletionClient"]:
+            return errors
+        
+        config = component.config or {}
+        
+        # Validate API key is present
+        if not config.get("api_key"):
+            errors.append(ValidationError(
+                field="api_key",
+                error="Gemini API key is required",
+                suggestion="Provide a valid Google AI API key for Gemini authentication"
+            ))
+        
+        # Validate model name
+        model = config.get("model")
+        if model:
+            try:
+                from kagent.models.gemini._model_info import validate_model
+                if not validate_model(model):
+                    errors.append(ValidationError(
+                        field="model",
+                        error=f"Unsupported Gemini model: {model}",
+                        suggestion="Use a supported Gemini model like 'gemini-1.5-pro' or 'gemini-1.5-flash'"
+                    ))
+            except ImportError:
+                # If model info module is not available, skip validation
+                pass
+        
+        # Validate temperature range
+        temperature = config.get("temperature")
+        if temperature is not None:
+            try:
+                temp_val = float(temperature)
+                if not (0.0 <= temp_val <= 2.0):
+                    errors.append(ValidationError(
+                        field="temperature",
+                        error="Temperature must be between 0.0 and 2.0",
+                        suggestion="Set temperature to a value between 0.0 (deterministic) and 2.0 (creative)"
+                    ))
+            except (ValueError, TypeError):
+                errors.append(ValidationError(
+                    field="temperature",
+                    error="Temperature must be a valid number",
+                    suggestion="Provide temperature as a number between 0.0 and 2.0"
+                ))
+        
+        # Validate top_p range
+        top_p = config.get("top_p")
+        if top_p is not None:
+            try:
+                top_p_val = float(top_p)
+                if not (0.0 <= top_p_val <= 1.0):
+                    errors.append(ValidationError(
+                        field="top_p",
+                        error="top_p must be between 0.0 and 1.0",
+                        suggestion="Set top_p to a value between 0.0 and 1.0"
+                    ))
+            except (ValueError, TypeError):
+                errors.append(ValidationError(
+                    field="top_p",
+                    error="top_p must be a valid number",
+                    suggestion="Provide top_p as a number between 0.0 and 1.0"
+                ))
+        
+        # Validate safety settings
+        safety_settings = config.get("safety_settings")
+        if safety_settings:
+            valid_categories = {
+                "HARM_CATEGORY_HARASSMENT",
+                "HARM_CATEGORY_HATE_SPEECH", 
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "HARM_CATEGORY_DANGEROUS_CONTENT"
+            }
+            valid_thresholds = {
+                "BLOCK_NONE",
+                "BLOCK_LOW_AND_ABOVE",
+                "BLOCK_MEDIUM_AND_ABOVE", 
+                "BLOCK_ONLY_HIGH"
+            }
+            
+            if isinstance(safety_settings, dict):
+                for category, threshold in safety_settings.items():
+                    if category not in valid_categories:
+                        errors.append(ValidationError(
+                            field="safety_settings",
+                            error=f"Invalid safety category: {category}",
+                            suggestion=f"Use one of: {', '.join(valid_categories)}"
+                        ))
+                    if threshold not in valid_thresholds:
+                        errors.append(ValidationError(
+                            field="safety_settings",
+                            error=f"Invalid safety threshold: {threshold}",
+                            suggestion=f"Use one of: {', '.join(valid_thresholds)}"
+                        ))
+        
+        return errors
 
     @staticmethod
     def validate_config_schema(component: ComponentModel) -> List[ValidationError]:
@@ -146,6 +253,10 @@ class ValidationService:
         # Validate schema
         schema_errors = cls.validate_config_schema(component)
         errors.extend(schema_errors)
+        
+        # Validate Gemini-specific configuration
+        gemini_errors = cls.validate_gemini_config(component)
+        errors.extend(gemini_errors)
 
         # Only attempt instantiation if no errors so far
         if not errors:
